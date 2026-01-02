@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Budget Mensuel</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2196F3">
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f0f0f0;
+  margin: 0;
+  padding: 40px 0;
+  display: flex;
+  justify-content: center;
+}
+.container {
+  background: #fff;
+  padding: 30px 40px;
+  border-radius: 12px;
+  width: 360px;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+  text-align: center;
+}
+input {
+  width: 100px;
+  padding: 5px;
+}
+button {
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.section {
+  margin-bottom: 20px;
+}
+#remaining {
+  font-size: 2.8em;
+  font-weight: bold;
+  margin: 10px 0;
+}
+#saveButton {
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 5px;
+}
+#resetButton {
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  margin-left: 10px;
+}
+ul {
+  text-align: left;
+  padding-left: 20px;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+  <h1>Budget Mensuel</h1>
+
+  <div class="section">
+    <label>Budget du mois (€)</label><br>
+    <input type="number" id="budgetInput">
+    <button onclick="setBudget()">Valider</button>
+  </div>
+
+  <div class="section">
+    <label>Dépense (€)</label><br>
+    <input type="number" id="expenseInput">
+    <button onclick="addExpense()">Ajouter</button>
+  </div>
+
+  <div class="section">
+    <div>Argent restant</div>
+    <div id="remaining">0.00</div>
+  </div>
+
+  <div class="section">
+    <button id="saveButton" onclick="saveMonth()">Sauvegarder le mois</button>
+    <button id="resetButton" onclick="resetBudget()">Reset</button>
+  </div>
+
+  <div class="section">
+    <h3>Historique</h3>
+    <ul id="historyList"></ul>
+  </div>
+</div>
+
+<script>
+// ===== DONNÉES =====
+let remaining = parseFloat(localStorage.getItem("remaining")) || 0;
+let initialBudget = parseFloat(localStorage.getItem("initialBudget")) || 0;
+let history = JSON.parse(localStorage.getItem("history")) || [];
+
+// ===== AFFICHAGE =====
+function updateDisplay() {
+  const el = document.getElementById("remaining");
+  el.textContent = remaining.toFixed(2);
+
+  if (initialBudget === 0) {
+    el.style.color = "black";
+    return;
+  }
+
+  const ratio = remaining / initialBudget;
+  if (ratio > 0.5) el.style.color = "green";
+  else if (ratio > 0.2) el.style.color = "orange";
+  else el.style.color = "red";
+}
+
+// ===== BUDGET =====
+function setBudget() {
+  const value = parseFloat(document.getElementById("budgetInput").value);
+  if (!isNaN(value)) {
+    remaining = value;
+    initialBudget = value;
+    localStorage.setItem("remaining", remaining);
+    localStorage.setItem("initialBudget", initialBudget);
+    updateDisplay();
+  }
+}
+
+// ===== DÉPENSE =====
+function addExpense() {
+  const value = parseFloat(document.getElementById("expenseInput").value);
+  if (!isNaN(value)) {
+    remaining -= value;
+    if (remaining < 0) remaining = 0;
+    localStorage.setItem("remaining", remaining);
+    document.getElementById("expenseInput").value = "";
+    updateDisplay();
+  }
+}
+
+// ===== SAUVEGARDE =====
+function saveMonth() {
+  if (initialBudget === 0) return alert("Définir un budget d'abord");
+  const month = new Date().toLocaleString("fr-FR", { month: "long", year: "numeric" });
+  history.push({ month, initialBudget, remaining });
+  localStorage.setItem("history", JSON.stringify(history));
+  updateHistory();
+}
+
+// ===== HISTORIQUE =====
+function updateHistory() {
+  const list = document.getElementById("historyList");
+  list.innerHTML = "";
+  history.forEach(h => {
+    const li = document.createElement("li");
+    li.textContent = `${h.month} → Initial: €${h.initialBudget} | Restant: €${h.remaining.toFixed(2)}`;
+    list.appendChild(li);
+  });
+}
+
+// ===== RESET =====
+function resetBudget() {
+  if (confirm("Réinitialiser le budget ?")) {
+    remaining = 0;
+    initialBudget = 0;
+    localStorage.setItem("remaining", 0);
+    localStorage.setItem("initialBudget", 0);
+    updateDisplay();
+  }
+}
+
+// INIT
+updateDisplay();
+updateHistory();
+
+// ===== SERVICE WORKER =====
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js");
+}
+</script>
+</body>
+</html>
